@@ -21,4 +21,9 @@ contentServer.use(function(req, res) {
 		res.redirect('/default.html');
 	}
 });
-contentServer.listen(8000);
+
+// Figure out which port we're listening on.
+var port = process.env.PORT || 5000;
+
+// And start the content server
+contentServer.listen(port);
