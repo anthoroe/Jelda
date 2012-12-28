@@ -1,4 +1,75 @@
 ////////////////////////////////////////////////////////////
+// The player entity
+////////////////////////////////////////////////////////////
+var jeldaPlayerEntity = function(engine) {
+
+	var speed = 200;
+
+	// TODO: Probably want to request this through the entity cache, to standardize it and load all assets.
+	var image = new Image(), x, y;
+
+	////////////////////////////////////////////////////////////
+	// DoProcessing
+	////////////////////////////////////////////////////////////
+	this.DoProcessing = function(delta) {
+
+		// Key states contains all the important things.
+		var change = delta * (speed / 1000), 
+			keyStates = engine.input.PollKeys();
+
+		// Figure out our velocities in either direction. 
+		if (keyStates[37] === true) {
+			x -= change;
+		}
+		if (keyStates[39] === true) {
+			x += change;
+		}
+		if (keyStates[38] === true) {
+			y -= change;
+		}
+		if (keyStates[40] === true) {
+			y += change;
+		}
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// Draw
+	////////////////////////////////////////////////////////////
+	this.Draw = function(g) {
+
+		// Just draw an image at the right place, for now.
+		g.DrawImage(image, x, y);
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// SetPosition
+	////////////////////////////////////////////////////////////
+	this.SetPosition = function(xPos, yPos) {
+
+		x = xPos;
+		y = yPos;
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// Initialization
+	////////////////////////////////////////////////////////////
+
+	// Subscribe to input events
+	(function() {
+
+		// DEBUG: Preload an image
+		image.src = 'res/entities/player/player.png';
+
+	})();
+
+};
+
+/////////////////////////////// APPLICATION CODE ///////////////////////////////
+
+////////////////////////////////////////////////////////////
 // The local cache. This stores behaviors, images, maps, etc.
 ////////////////////////////////////////////////////////////
 var jeldaCache = function() {
@@ -8,7 +79,8 @@ var jeldaCache = function() {
 	////////////////////////////////////////////////////////////
 	var cache = {
 			Map: {},
-			Tile: {}
+			Tile: {},
+			Entity: {}
 		},
 		engine;
 
@@ -58,6 +130,15 @@ var jeldaCache = function() {
 	var getMap = function(mapId, callback) {
 
 		getCachedAsset('Map', mapId, callback);
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// GetMap 
+	////////////////////////////////////////////////////////////
+	var getEntity = function(entityId, callback) {
+
+		getCachedAsset('Entity', entityId, callback);
 
 	};
 
@@ -157,6 +238,7 @@ var jeldaCache = function() {
 	// Expose the things we want to expose
 	////////////////////////////////////////////////////////////
 	return {
+		GetEntity: getEntity,
 		GetMap: getMap,
 		GetMultipleTiles: getMultipleTiles,
 		GetTile: getTile,
@@ -343,6 +425,83 @@ var jeldaGraphicsEngine = function() {
 };
 
 ////////////////////////////////////////////////////////////
+// Captures input
+////////////////////////////////////////////////////////////
+var jeldaInput = function() {
+
+	////////////////////////////////////////////////////////////
+	// Variables
+	////////////////////////////////////////////////////////////
+	var engine,
+		keyHooks = [],
+		keyStates = [];
+
+	////////////////////////////////////////////////////////////
+	// handleInputEvent 
+	////////////////////////////////////////////////////////////
+	var handleInputEvent = function(event) {
+
+		keyStates[event.keyCode] = event.type === 'keydown';
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// HookInputEvent 
+	////////////////////////////////////////////////////////////
+	var hookKeyEvents = function(event, handler) {
+
+		// Add it to our list of items to be notified of key presses.
+		document.onkeyup = handleInputEvent;
+		document.onkeydown = handleInputEvent;
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// Initialize 
+	////////////////////////////////////////////////////////////
+	var initialize = function(e) {
+
+		// Save the engine reference
+		engine = e;
+
+		// Initialize the array of key-press states.
+		for (var i = 8; i <= 222; i++) {
+			keyStates[i] = false;
+		}
+
+		// Hook into key up and key down events
+		document.onkeyup = handleInputEvent;
+		document.onkeydown = handleInputEvent;
+
+		// Log that network connection has been initialized.
+		engine.logger.LogEvent('Initialized input manager.');
+
+		// Return that everything worked out okay.
+		return true;
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// PollKeys 
+	////////////////////////////////////////////////////////////
+	var pollKeys = function() {
+
+		// Return the states of all the keys
+		return keyStates;
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// Expose the things we want to expose
+	////////////////////////////////////////////////////////////
+	return {
+		PollKeys: pollKeys,
+		Initialize: initialize
+	};
+
+};
+
+////////////////////////////////////////////////////////////
 // The network connection.
 ////////////////////////////////////////////////////////////
 var jeldaNetworkConnection = function() {
@@ -373,6 +532,7 @@ var jeldaNetworkConnection = function() {
 					'brick',
 					'water'
 				],
+				Entities: [],
 				MapData: [
 					[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
 					[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
@@ -436,14 +596,14 @@ var jeldaNetworkConnection = function() {
 
 		/* Debuggery time! For now, we're just going to return a standard object. */
 		callback({
+			// TODO: PlayerInfo should just be a PlayerEntity that gets passed down in the entity list.
+			// Entity behavior should take responsibility for making it movable.
 			PlayerInfo: {
 				// Should be an initialized PlayerEntity at some point.
 				Name: 'Player'
 			},
 			LocationInfo: {
-				LocationId: 'Map1',
-				XPos: 4,
-				YPos: 4
+				LocationId: 'Map1'
 			}
 		});
 
@@ -485,7 +645,7 @@ var jeldaWorldManager = function() {
 	////////////////////////////////////////////////////////////
 	// Variables
 	////////////////////////////////////////////////////////////
-	var engine, map, state;
+	var engine, entities = [], map, mapState = { Entities: [] }, state;
 
 	////////////////////////////////////////////////////////////
 	// getCurrentMap
@@ -493,7 +653,12 @@ var jeldaWorldManager = function() {
 	var getCurrentMap = function() { return map };
 
 	////////////////////////////////////////////////////////////
-	// getCurrentMap
+	// getMapState
+	////////////////////////////////////////////////////////////
+	var getMapState = function() { return mapState };
+
+	////////////////////////////////////////////////////////////
+	// getState
 	////////////////////////////////////////////////////////////
 	var getState = function() { return state };
 
@@ -546,8 +711,22 @@ var jeldaWorldManager = function() {
 	////////////////////////////////////////////////////////////
 	var handlePlayerStateChange = function(newState, callback) {
 
+		// TODO: Clean up old state, dispose all items.
+
 		// First, did we jump maps?
 		handleMapUpdate(newState, function() {
+
+			// TODO: Get MAP state
+
+			// Create a new player entity for this map.
+			var entity = new jeldaPlayerEntity(engine);
+
+			// Set the player entity's initial position
+			entity.SetPosition(40, 40);
+
+			// Track the player entity.
+			// TODO: Player should be initialized like any other entity
+			mapState.Entities.push(entity);
 
 			// We're done. Save the state as the new current state...
 			state = newState;
@@ -586,17 +765,70 @@ var jeldaWorldManager = function() {
 	};
 
 	////////////////////////////////////////////////////////////
+	// processEntityStates 
+	////////////////////////////////////////////////////////////
+	var processEntityStates = function(delta) {
+
+		var entities = mapState.Entities;
+
+		// Iterate through all the entities
+		for (var i = 0; i < entities.length; i++) {
+
+			// If it's a renderable entity...
+			if (typeof entities[i].DoProcessing === 'function') {
+
+				// Render it.
+				entities[i].DoProcessing(delta);
+
+			}
+
+		}
+
+	};
+
+	////////////////////////////////////////////////////////////
 	// RunWorld
 	////////////////////////////////////////////////////////////
 	var runWorld = function() {
 
-		var log = engine.logger;
+		var log = engine.logger, running = true, lastFrameStart = new Date().getTime();
+
+		// Here's our game loop
+		var gameLoop = function() {
+
+			var startTime = new Date().getTime(), delta = startTime - lastFrameStart;
+
+			// Limit frame rates to 60fps
+			if (delta <= (1000 / 60)) {
+				setTimeout(gameLoop, 1);
+				return;
+			}
+
+			// TODO: Exit more gracefully
+			if (running === false) { return; }
+
+			// Let every entity do its processing
+			processEntityStates(delta);
+
+			// Draw the world
+			engine.worldRenderer.DrawFrame();
+
+			// Debuggery - print FPS.
+			var frameRate = Math.floor(1000 / (startTime - lastFrameStart));
+			engine.graphics.DrawText(frameRate + 'fps', 'Arial', 12, 'white', 10, 20); 
+
+			// Allow processing, then come back.
+			setTimeout(gameLoop, 0);
+
+			// Store the time we started rendering this.
+			lastFrameStart = startTime;
+		};
 
 		// Log that we entered the world rendering loop.
 		log.LogEvent('Entered game loop.');
 
-		/* Debuggery. Draw world once, then done. */
-		engine.worldRenderer.DrawFrame();
+		// Actually start the game loop.
+		gameLoop();
 
 	};
 
@@ -605,6 +837,7 @@ var jeldaWorldManager = function() {
 	////////////////////////////////////////////////////////////
 	return {
 		GetCurrentMap: getCurrentMap,
+		GetMapState: getMapState,
 		GetState: getState,
 		Initialize: initialize,
 		RunWorld: runWorld
@@ -626,13 +859,49 @@ var jeldaWorldRenderer = function() {
 	////////////////////////////////////////////////////////////
 	var drawFrame = function() {
 
+		// Clear the display.
+		engine.graphics.ClearCanvas();
+
+		// First, draw terrain (the map.)
+		drawTerrain();
+
+		// Now, draw entities.
+		drawEntities();
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// drawEntities
+	////////////////////////////////////////////////////////////
+	var drawEntities = function() {
+
+		var entities = engine.worldManager.GetMapState().Entities,
+			graphics = engine.graphics;
+
+		// Iterate through all the entities
+		for (var i = 0; i < entities.length; i++) {
+
+			// If it's a renderable entity...
+			if (typeof entities[i].Draw === 'function') {
+
+				// Render it.
+				entities[i].Draw(graphics);
+
+			}
+
+		}
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// drawTerrain
+	////////////////////////////////////////////////////////////
+	var drawTerrain = function() {
+
 		// Get a reference to the map and all its associated assets.
 		var map = engine.worldManager.GetCurrentMap(),
 			graphics = engine.graphics,
 			currentTile;
-
-		// Clear the display.
-		graphics.ClearCanvas();
 
 		/* This is ALL debuggery right now, though probably represents what'll happen at some point. */
 		for (var x = 0; x < map.Dimensions.Width; x++) {
@@ -686,6 +955,7 @@ var jeldaClient = (function() {
 	var engine = {
 		cache: new jeldaCache(),
 		graphics: new jeldaGraphicsEngine(),
+		input: new jeldaInput(),
 		logger: new jeldaDebugLogger(),
 		network: new jeldaNetworkConnection(),
 		worldManager: new jeldaWorldManager(),
@@ -741,6 +1011,12 @@ var jeldaClient = (function() {
 
 		// Get network things ready.
 		if (!engine.network.Initialize(engine)) {
+			engine.logger.logEvent('Failed to initialize network connection!');
+			return;
+		}
+
+		// Get network things ready.
+		if (!engine.input.Initialize(engine)) {
 			engine.logger.logEvent('Failed to initialize network connection!');
 			return;
 		}
