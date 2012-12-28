@@ -78,9 +78,9 @@ var jeldaCache = function() {
 	// Variables
 	////////////////////////////////////////////////////////////
 	var cache = {
-			Map: {},
-			Tile: {},
-			Entity: {}
+			map: {},
+			tile: {},
+			entity: {}
 		},
 		engine;
 
@@ -129,7 +129,7 @@ var jeldaCache = function() {
 	////////////////////////////////////////////////////////////
 	var getMap = function(mapId, callback) {
 
-		getCachedAsset('Map', mapId, callback);
+		getCachedAsset('map', mapId, callback);
 
 	};
 
@@ -138,7 +138,7 @@ var jeldaCache = function() {
 	////////////////////////////////////////////////////////////
 	var getEntity = function(entityId, callback) {
 
-		getCachedAsset('Entity', entityId, callback);
+		getCachedAsset('entity', entityId, callback);
 
 	};
 
@@ -147,7 +147,7 @@ var jeldaCache = function() {
 	////////////////////////////////////////////////////////////
 	var getTile = function(tileId, callback) {
 
-		getCachedAsset('Tile', tileId, function(asset) {
+		getCachedAsset('tile', tileId, function(asset) {
 			
 			// We need to get the image data, too.
 			asset.ImageData = new Image();
@@ -505,81 +505,16 @@ var jeldaNetworkConnection = function() {
 	////////////////////////////////////////////////////////////
 	var getAsset = function(assetType, assetId, callback) {
 
-		/* Debuggery. Just returning some default stuff. */
-		if (assetType === 'Map') {
+		// Build the path to the asset
+		var assetPath = '/assets/' + assetType + '/' + assetId;
 
-			callback({
-				Metadata: {
-					Id: 'Map1'
-				},
-				Dimensions: {
-					Width: 20,
-					Height: 20
-				},
-				TileAssets: [
-					'grass',
-					'brick',
-					'water'
-				],
-				Entities: [],
-				MapData: [
-					[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-					[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-					[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-					[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-					[0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-					[1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
-					[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-					[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0],
-					[0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0],
-					[0, 0, 2, 2, 2, 2, 0, 0, 2, 2, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0],
-					[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-					[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-					[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-					[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-					[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-					[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-					[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-					[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-					[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-					[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
-				]
-			});
-
-		}
-
-		// Handle the tiles
-		else if (assetType === 'Tile' && assetId === 'grass') {
-			
-			callback({
-				ImageUri: 'res/tiles/grass.png'
-				/* BEHAVIOR GOES HERE */
-			});
-
-		}
-
-		else if (assetType === 'Tile' && assetId === 'brick') {
-			
-			callback({
-				ImageUri: 'res/tiles/brick.png'
-				/* BEHAVIOR GOES HERE */
-			});
-
-		}
-
-		else if (assetType === 'Tile' && assetId === 'water') {
-			
-			callback({
-				ImageUri: 'res/tiles/water.png'
-				/* BEHAVIOR GOES HERE */
-			});
-
-		}
+		// Request the asset
+		makeRequest(assetPath, callback);
 
 	};
 
 	////////////////////////////////////////////////////////////
-	// GetPlayerState
+	// getPlayerState	
 	////////////////////////////////////////////////////////////
 	var getPlayerState = function(callback) {
 
@@ -592,7 +527,7 @@ var jeldaNetworkConnection = function() {
 				Name: 'Player'
 			},
 			LocationInfo: {
-				LocationId: 'Map1'
+				LocationId: 'home'
 			}
 		});
 
@@ -611,6 +546,44 @@ var jeldaNetworkConnection = function() {
 
 		// Return that everything worked out okay.
 		return true;
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// makeRequest 
+	////////////////////////////////////////////////////////////
+	var makeRequest = function(path, callback) {
+
+		// Create the XHR object
+		var xhr = new XMLHttpRequest();
+
+		// Set up our handler for when it's done.
+		xhr.onreadystatechange = function() {
+
+			// Is it ready?
+			if (xhr.readyState === 4 && xhr.status === 200) {
+
+				// Turn this into an object.
+				// We don't use JSON.parse because we trust the source and need scripts to appear, too.
+				callback(objectify(xhr.responseText));
+
+			}
+
+		};
+
+		// Finish configuring and make the request
+		xhr.open('GET', path, true);
+
+		xhr.send();
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// objectify 
+	////////////////////////////////////////////////////////////
+	var objectify = function(responseText) {
+
+		return eval('(function() { return ' + responseText + '; })();');
 
 	};
 

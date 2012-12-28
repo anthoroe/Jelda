@@ -23,7 +23,7 @@ contentServer.use(function(req, res) {
 });
 
 // Figure out which port we're listening on.
-var port = process.env.PORT || 5000;
+var port = process.env.PORT || 8000;
 
 // And start the content server
 contentServer.listen(port);
