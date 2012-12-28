@@ -446,17 +446,6 @@ var jeldaInput = function() {
 	};
 
 	////////////////////////////////////////////////////////////
-	// HookInputEvent 
-	////////////////////////////////////////////////////////////
-	var hookKeyEvents = function(event, handler) {
-
-		// Add it to our list of items to be notified of key presses.
-		document.onkeyup = handleInputEvent;
-		document.onkeydown = handleInputEvent;
-
-	};
-
-	////////////////////////////////////////////////////////////
 	// Initialize 
 	////////////////////////////////////////////////////////////
 	var initialize = function(e) {
@@ -470,8 +459,8 @@ var jeldaInput = function() {
 		}
 
 		// Hook into key up and key down events
-		document.onkeyup = handleInputEvent;
-		document.onkeydown = handleInputEvent;
+		window.onkeyup = handleInputEvent;
+		window.onkeydown = handleInputEvent;
 
 		// Log that network connection has been initialized.
 		engine.logger.LogEvent('Initialized input manager.');
