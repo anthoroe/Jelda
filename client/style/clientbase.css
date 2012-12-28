@@ -1,0 +1,25 @@
+body {
+	margin: 0px;
+	overflow: hidden;
+}
+
+#viewport {
+	position: absolute;
+	left: 0px;
+	width: 100%;
+	bottom: 20%;
+	background: black;
+}
+
+#debug-log {
+	overflow-y: scroll;
+	position: absolute;
+	top: 80%;
+	width: 100%;
+	bottom: 0;
+	font-family: monospace;
+}
+
+#debug-log p {
+	margin: 0px;
+}
