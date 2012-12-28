@@ -1,75 +1,4 @@
 ////////////////////////////////////////////////////////////
-// The player entity
-////////////////////////////////////////////////////////////
-var jeldaPlayerEntity = function(engine) {
-
-	var speed = 200;
-
-	// TODO: Probably want to request this through the entity cache, to standardize it and load all assets.
-	var image = new Image(), x, y;
-
-	////////////////////////////////////////////////////////////
-	// DoProcessing
-	////////////////////////////////////////////////////////////
-	this.DoProcessing = function(delta) {
-
-		// Key states contains all the important things.
-		var change = delta * (speed / 1000), 
-			keyStates = engine.input.PollKeys();
-
-		// Figure out our velocities in either direction. 
-		if (keyStates[37] === true) {
-			x -= change;
-		}
-		if (keyStates[39] === true) {
-			x += change;
-		}
-		if (keyStates[38] === true) {
-			y -= change;
-		}
-		if (keyStates[40] === true) {
-			y += change;
-		}
-
-	};
-
-	////////////////////////////////////////////////////////////
-	// Draw
-	////////////////////////////////////////////////////////////
-	this.Draw = function(g) {
-
-		// Just draw an image at the right place, for now.
-		g.DrawImage(image, x, y);
-
-	};
-
-	////////////////////////////////////////////////////////////
-	// SetPosition
-	////////////////////////////////////////////////////////////
-	this.SetPosition = function(xPos, yPos) {
-
-		x = xPos;
-		y = yPos;
-
-	};
-
-	////////////////////////////////////////////////////////////
-	// Initialization
-	////////////////////////////////////////////////////////////
-
-	// Subscribe to input events
-	(function() {
-
-		// DEBUG: Preload an image
-		image.src = 'res/entities/player/player.png';
-
-	})();
-
-};
-
-/////////////////////////////// APPLICATION CODE ///////////////////////////////
-
-////////////////////////////////////////////////////////////
 // The local cache. This stores behaviors, images, maps, etc.
 ////////////////////////////////////////////////////////////
 var jeldaCache = function() {
@@ -506,7 +435,7 @@ var jeldaNetworkConnection = function() {
 	var getAsset = function(assetType, assetId, callback) {
 
 		// Build the path to the asset
-		var assetPath = '/assets/' + assetType + '/' + assetId;
+		var assetPath = '/assets/' + assetType + '/' + assetId + '.js';
 
 		// Request the asset
 		makeRequest(assetPath, callback);
@@ -514,13 +443,32 @@ var jeldaNetworkConnection = function() {
 	};
 
 	////////////////////////////////////////////////////////////
-	// getPlayerState	
+	// GetMapState	
+	////////////////////////////////////////////////////////////
+	var getMapState = function(mapId, callback) {
+
+		callback({
+			Entities: [
+				{
+					EntityId: '1234',
+					EntityType: 'playerEntity',
+					EntityState: {
+						X: 50,
+						Y: 50
+					}
+				}
+			]
+		});
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// GetPlayerState	
 	////////////////////////////////////////////////////////////
 	var getPlayerState = function(callback) {
 
 		/* Debuggery time! For now, we're just going to return a standard object. */
 		callback({
-			// TODO: PlayerInfo should just be a PlayerEntity that gets passed down in the entity list.
 			// Entity behavior should take responsibility for making it movable.
 			PlayerInfo: {
 				// Should be an initialized PlayerEntity at some point.
@@ -592,6 +540,7 @@ var jeldaNetworkConnection = function() {
 	////////////////////////////////////////////////////////////
 	return {
 		GetAsset: getAsset,
+		GetMapState: getMapState,
 		GetPlayerState: getPlayerState,
 		Initialize: initialize
 	};
@@ -607,7 +556,7 @@ var jeldaWorldManager = function() {
 	////////////////////////////////////////////////////////////
 	// Variables
 	////////////////////////////////////////////////////////////
-	var engine, entities = [], map, mapState = { Entities: [] }, state;
+	var engine, map, mapState, state;
 
 	////////////////////////////////////////////////////////////
 	// getCurrentMap
@@ -653,7 +602,7 @@ var jeldaWorldManager = function() {
 					map.TileAssets = tileAssets;
 
 					// Loaded all the map assets. We're good to go from here on out.
-					callback();
+					callback(true);
 
 				});
 
@@ -662,7 +611,7 @@ var jeldaWorldManager = function() {
 		} else {
 
 			// Nothing to do!
-			callback();
+			callback(false);
 
 		}
 
@@ -676,25 +625,29 @@ var jeldaWorldManager = function() {
 		// TODO: Clean up old state, dispose all items.
 
 		// First, did we jump maps?
-		handleMapUpdate(newState, function() {
-
-			// TODO: Get MAP state
-
-			// Create a new player entity for this map.
-			var entity = new jeldaPlayerEntity(engine);
-
-			// Set the player entity's initial position
-			entity.SetPosition(40, 40);
-
-			// Track the player entity.
-			// TODO: Player should be initialized like any other entity
-			mapState.Entities.push(entity);
+		handleMapUpdate(newState, function(didChangeMaps) {
 
 			// We're done. Save the state as the new current state...
 			state = newState;
 
-			// ...And callback.
-			callback();
+			// Log the change.
+			engine.logger.LogEvent('Player state updated.');
+
+			// If we changed maps, we need to sync map state with the new region.
+			if (didChangeMaps) { 
+
+				// Log that we changed maps.
+				engine.logger.LogEvent('NEW REGION - Must sync map state..');
+
+				// Sync state with the new map.
+				syncMapState(callback);
+
+			} else {
+
+				// ...And callback.
+				callback();
+
+			}
 
 		});
 
@@ -716,11 +669,55 @@ var jeldaWorldManager = function() {
 
 			// Return that everything worked out okay.
 			handlePlayerStateChange(playerState, function() {
-				
+
 				// Call the callback.
 				callback(true);
 
 			});
+
+		});
+
+	};
+
+
+	////////////////////////////////////////////////////////////
+	// initializeEntity
+	////////////////////////////////////////////////////////////
+	var initializeEntity = function(entity, callback) {
+
+		// Get the behavior from the cache
+		engine.cache.GetEntity(entity.EntityType, function(entityAsset) {
+
+			// First, initialize the entity.
+			var finishedEntity = new entityAsset(engine);
+
+			// Now, assign it its ID.
+			finishedEntity.EntityId = entity.EntityId
+
+			// TODO: Preload all necessary graphics assets.
+
+			// Set up entity state.
+			for (var stateMember in entity.EntityState) {
+
+				// No inherited members
+				if (!entity.EntityState.hasOwnProperty(stateMember)) {
+					return;
+				}
+
+				// Set the state on this member
+				finishedEntity[stateMember] = entity.EntityState[stateMember];
+
+			}
+
+			// Initialize the entity, if there's initialization to be done, now that it has a state.
+			if (typeof finishedEntity.Initialize === 'function') {
+
+				finishedEntity.Initialize();
+
+			}
+
+			// Call the callback
+			callback(finishedEntity);
 
 		});
 
@@ -799,6 +796,65 @@ var jeldaWorldManager = function() {
 
 		// Actually start the game loop.
 		gameLoop();
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// syncMapState
+	////////////////////////////////////////////////////////////
+	var syncMapState = function(callback) {
+
+		// Log what's about to happen
+		engine.logger.LogEvent('Requesting map state.');
+
+		// First thing's first - let's request the map state.
+		engine.network.GetMapState(state.LocationInfo.LocationId, function(newMapState) {
+
+			var entitiesToInitialize = newMapState.Entities.length;
+
+			// Dump out if there's no initializing to do
+			if (entitiesToInitialize === 0) {
+				callback();
+			}
+
+			// Now that we have it, let's initialize all the entities.
+			for (var i = 0; i < newMapState.Entities.length; i++) {
+
+				(function(i) {
+
+					// Convert the entity descriptin into something we can work with.
+					initializeEntity(newMapState.Entities[i], function(entity) {
+
+						// Actually assign it.
+						newMapState.Entities[i] = entity;
+
+						// If we have no entities left to initialize, then we're good.
+						entitiesToInitialize -= 1;
+
+						// We have no entities left to initialize?
+						if (entitiesToInitialize === 0) {
+
+							// Save the new map state as the current map state.
+							mapState = newMapState;
+
+							// Finally, we're done. Call back.
+							callback();
+
+							// And end here.
+							return;
+
+						};
+
+						// 
+						engine.logger.LogEvent(entitiesToInitialize + ' entities remain requiring initialization.');
+
+					});
+
+				})(i);
+
+			}
+
+		});
 
 	};
 

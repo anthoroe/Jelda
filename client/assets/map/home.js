@@ -1,18 +1,18 @@
 {
-	'Metadata': {
-		'Id': 'home'
+	Metadata: {
+		Id: 'home'
 	},
-	'Dimensions': {
-		'Width': 20,
-		'Height': 20
+	Dimensions: {
+		Width: 20,
+		Height: 20
 	},
-	'TileAssets': [
+	TileAssets: [
 		'grass',
 		'brick',
 		'water'
 	],
-	'Entities': [],
-	'MapData': [
+	Entities: [],
+	MapData: [
 		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
 		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
 		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
