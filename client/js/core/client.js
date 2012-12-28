@@ -800,8 +800,13 @@ var jeldaWorldManager = function() {
 
 			// Limit frame rates to 60fps
 			if (delta <= (1000 / 60)) {
+
+				// Delay briefly.
 				setTimeout(gameLoop, 1);
+
+				// Don't finish this iteration.
 				return;
+
 			}
 
 			// TODO: Exit more gracefully
@@ -813,8 +818,10 @@ var jeldaWorldManager = function() {
 			// Draw the world
 			engine.worldRenderer.DrawFrame();
 
-			// Debuggery - print FPS.
+			// Calculate framerate.
 			var frameRate = Math.floor(1000 / (startTime - lastFrameStart));
+
+			// Print the framerate
 			engine.graphics.DrawText(frameRate + 'fps', 'Arial', 12, 'white', 10, 20); 
 
 			// Allow processing, then come back.
@@ -822,6 +829,7 @@ var jeldaWorldManager = function() {
 
 			// Store the time we started rendering this.
 			lastFrameStart = startTime;
+
 		};
 
 		// Log that we entered the world rendering loop.
