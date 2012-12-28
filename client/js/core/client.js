@@ -878,7 +878,11 @@ var jeldaWorldRenderer = function() {
 	////////////////////////////////////////////////////////////
 	// Variables
 	////////////////////////////////////////////////////////////
-	var engine;
+	var camera = {
+			X: 0,
+			Y: 0
+		},
+		engine;
 
 	////////////////////////////////////////////////////////////
 	// DrawFrame
@@ -904,6 +908,8 @@ var jeldaWorldRenderer = function() {
 		var entities = engine.worldManager.GetMapState().Entities,
 			graphics = engine.graphics;
 
+		// TODO: Clip offscreen entities
+
 		// Iterate through all the entities
 		for (var i = 0; i < entities.length; i++) {
 
@@ -911,7 +917,7 @@ var jeldaWorldRenderer = function() {
 			if (typeof entities[i].Draw === 'function') {
 
 				// Render it.
-				entities[i].Draw(graphics);
+				entities[i].Draw(graphics, { X: entities[i].X - camera.X, Y: entities[i].Y - camera.Y });
 
 			}
 
@@ -937,7 +943,7 @@ var jeldaWorldRenderer = function() {
 				currentTile = map.MapData[y][x];
 
 				// Paint the tile.
-				graphics.DrawImage(map.TileAssets[currentTile].ImageData, 32 * x, 32 * y);
+				graphics.DrawImage(map.TileAssets[currentTile].ImageData, (32 * x) - camera.X, (32 * y) - camera.Y);
 
 			}
 		}
@@ -961,11 +967,21 @@ var jeldaWorldRenderer = function() {
 	};
 
 	////////////////////////////////////////////////////////////
+	// setCamera 
+	////////////////////////////////////////////////////////////
+	var setCamera = function(x, y) {
+
+		camera = { X: x, Y: y };
+
+	};
+
+	////////////////////////////////////////////////////////////
 	// Expose the things we want to expose
 	////////////////////////////////////////////////////////////
 	return {
 		DrawFrame: drawFrame,
-		Initialize: initialize
+		Initialize: initialize,
+		SetCamera: setCamera
 	};
 
 };

@@ -1,7 +1,9 @@
 function(engine) {
 
-	var speed = 200;
+	var speed = 200,
+		viewportDimensions = engine.graphics.GetDimensions();
 
+	// Debug
 	var image = new Image();
 
 	////////////////////////////////////////////////////////////
@@ -37,15 +39,17 @@ function(engine) {
 			this.Y += change;
 		}
 
+		// Set the camera position to center on us
+		engine.worldRenderer.SetCamera(this.X - viewportDimensions.width / 2, this.Y - viewportDimensions.height / 2);
 	};
 
 	////////////////////////////////////////////////////////////
 	// Draw
 	////////////////////////////////////////////////////////////
-	this.Draw = function(g) {
+	this.Draw = function(g, position) {
 
 		// Just draw an image at the right place, for now.
-		g.DrawImage(image, this.X, this.Y);
+		g.DrawImage(image, position.X, position.Y);
 
 	};
 
