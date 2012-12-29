@@ -17,6 +17,16 @@ function(engine) {
 	////////////////////////////////////////////////////////////
 	this.Y = 0;
 
+		////////////////////////////////////////////////////////////
+	// VelocityX
+	////////////////////////////////////////////////////////////
+	this.VelocityX = 0;
+
+	////////////////////////////////////////////////////////////
+	// VelocityY
+	////////////////////////////////////////////////////////////
+	this.VelocityY = 0;
+
 	////////////////////////////////////////////////////////////
 	// DisplayName
 	////////////////////////////////////////////////////////////
@@ -31,18 +41,37 @@ function(engine) {
 		var change = delta * (speed / 1000), 
 			keyStates = engine.input.PollKeys();
 
+		// Reset velocities
+		var velocityX = 0, velocityY = 0;
+
 		// Figure out our velocities in either direction. 
 		if (keyStates[37] === true) {
 			this.X -= change;
+			velocityX -= speed;
 		}
 		if (keyStates[39] === true) {
 			this.X += change;
+			velocityX += speed;
 		}
 		if (keyStates[38] === true) {
 			this.Y -= change;
+			velocityY -= speed;
 		}
 		if (keyStates[40] === true) {
 			this.Y += change;
+			velocityY  += speed;
+		}
+
+		// Do we need to update the server?
+		if (velocityX !== this.VelocityX || velocityY !== this.VelocityY) {
+
+			// Update the velocities
+			this.VelocityX = velocityX;
+			this.VelocityY = velocityY;
+
+			// Update the server
+			engine.network.SendEntityStateUpdate(this);
+
 		}
 
 		// Set the camera position to center on us
@@ -68,6 +97,20 @@ function(engine) {
 		g.DrawText(this.DisplayName, nameplateFont, 'black', nameX, nameY, 'white', 2);
 
 	};
+
+	////////////////////////////////////////////////////////////
+	// GetState
+	////////////////////////////////////////////////////////////
+	this.GetClientState = function() {
+
+		return {
+			X: this.X,
+			Y: this.Y,
+			VelocityX: this.VelocityX,
+			VelocityY: this.VelocityY
+		}
+
+	}
 
 	////////////////////////////////////////////////////////////
 	// Initialize

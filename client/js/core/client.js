@@ -444,6 +444,34 @@ var jeldaNetworkConnection = function() {
 	};
 
 	////////////////////////////////////////////////////////////
+	// GetPlayerState	
+	////////////////////////////////////////////////////////////
+	var getPlayerState = function(token, callback) {
+
+		var statePath = '/login/' + token;
+
+		// Actually request player state
+		makeRequest(statePath, callback);
+
+	};
+	
+	////////////////////////////////////////////////////////////
+	// Initialize 
+	////////////////////////////////////////////////////////////
+	var initialize = function(e) {
+
+		// Save the engine reference
+		engine = e;
+
+		// Log that network connection has been initialized.
+		engine.logger.LogEvent('Initialized network connection.');
+
+		// Return that everything worked out okay.
+		return true;
+
+	};
+
+	////////////////////////////////////////////////////////////
 	// LoginToMap	
 	////////////////////////////////////////////////////////////
 	var loginToMap = function(mapId, token, callback) {
@@ -481,40 +509,23 @@ var jeldaNetworkConnection = function() {
 			engine.worldManager.SetPlayerEntityId(data);
 
 		});
+
+		// Set up something to respond to the map state
+		mapServerConnection.on('entitystateupdate', function(data) {
+
+			// Log that we got the map state.
+			engine.logger.LogEvent('Received update to entity ' + data.EntityId + '.');
+
+			// The initial map state packet should be handled by our map state callback.
+			engine.worldManager.LocateAndUpdateEntity(data);
+
+		});
 		
 		// Log in to a specific map
 		mapServerConnection.emit('mapconnect', {
 			MapId: mapId,
 			Token: token
 		});
-
-	};
-
-	////////////////////////////////////////////////////////////
-	// GetPlayerState	
-	////////////////////////////////////////////////////////////
-	var getPlayerState = function(token, callback) {
-
-		var statePath = '/login/' + token;
-
-		// Actually request player state
-		makeRequest(statePath, callback);
-
-	};
-	
-	////////////////////////////////////////////////////////////
-	// Initialize 
-	////////////////////////////////////////////////////////////
-	var initialize = function(e) {
-
-		// Save the engine reference
-		engine = e;
-
-		// Log that network connection has been initialized.
-		engine.logger.LogEvent('Initialized network connection.');
-
-		// Return that everything worked out okay.
-		return true;
 
 	};
 
@@ -557,13 +568,33 @@ var jeldaNetworkConnection = function() {
 	};
 
 	////////////////////////////////////////////////////////////
+	// SendEntityStateUpdate
+	////////////////////////////////////////////////////////////
+	var sendEntityStateUpdate = function(entity) {
+
+		// Log what's happening
+		engine.logger.LogEvent('Entity ' + entity.EntityId + ' requested state update transmission.');
+
+		// Get the state of the entity.
+		var state = entity.GetClientState();
+
+		// Append the entity ID to the state
+		state.EntityId = entity.EntityId;
+
+		// Send it along
+		mapServerConnection.emit('entitystateupdate', state);
+
+	};
+
+	////////////////////////////////////////////////////////////
 	// Expose the things we want to expose
 	////////////////////////////////////////////////////////////
 	return {
 		GetAsset: getAsset,
 		LoginToMap: loginToMap,
 		GetPlayerState: getPlayerState,
-		Initialize: initialize
+		Initialize: initialize,
+		SendEntityStateUpdate: sendEntityStateUpdate
 	};
 };
 
@@ -577,7 +608,7 @@ var jeldaWorldManager = function() {
 	////////////////////////////////////////////////////////////
 	// Variables
 	////////////////////////////////////////////////////////////
-	var engine, map, mapState, state;
+	var engine, entityLookupTable = {}, map, mapState, state;
 
 	////////////////////////////////////////////////////////////
 	// getCurrentMap
@@ -726,17 +757,7 @@ var jeldaWorldManager = function() {
 			// TODO: Preload all necessary graphics assets.
 
 			// Set up entity state.
-			for (var stateMember in entity.EntityState) {
-
-				// No inherited members
-				if (!entity.EntityState.hasOwnProperty(stateMember)) {
-					return;
-				}
-
-				// Set the state on this member
-				finishedEntity[stateMember] = entity.EntityState[stateMember];
-
-			}
+			updateEntity(finishedEntity, entity.EntityState);
 
 			// Initialize the entity, if there's initialization to be done, now that it has a state.
 			if (typeof finishedEntity.Initialize === 'function') {
@@ -745,10 +766,23 @@ var jeldaWorldManager = function() {
 
 			}
 
+			// Add it to our entity lookup
+			// TODO: centralize management of entity list and entity lookup
+			entityLookupTable[entity.EntityId] = finishedEntity;
+
 			// Call the callback
 			callback(finishedEntity);
 
 		});
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// LocateAndUpdateEntity 
+	////////////////////////////////////////////////////////////
+	var locateAndUpdateEntity = function(entityState) {
+
+		updateEntity(entityLookupTable[entityState.EntityId], entityState);
 
 	};
 
@@ -891,7 +925,7 @@ var jeldaWorldManager = function() {
 
 						};
 
-						// 
+						// Log how many entities are left.
 						engine.logger.LogEvent(entitiesToInitialize + ' entities remain requiring initialization.');
 
 					});
@@ -905,6 +939,25 @@ var jeldaWorldManager = function() {
 	};
 
 	////////////////////////////////////////////////////////////
+	// updateEntity
+	////////////////////////////////////////////////////////////
+	var updateEntity = function(entity, entityState) {
+
+		for (var stateMember in entityState) {
+
+			// No inherited members
+			if (!entityState.hasOwnProperty(stateMember)) {
+				continue;
+			}
+
+			// Set the state on this member
+			entity[stateMember] = entityState[stateMember];
+
+		}
+
+	};
+
+	////////////////////////////////////////////////////////////
 	// Expose the things we want to expose
 	////////////////////////////////////////////////////////////
 	return {
@@ -912,6 +965,7 @@ var jeldaWorldManager = function() {
 		GetMapState: getMapState,
 		GetState: getState,
 		Initialize: initialize,
+		LocateAndUpdateEntity: locateAndUpdateEntity,
 		RunWorld: runWorld,
 		SetPlayerEntityId: setPlayerEntityId
 	};
