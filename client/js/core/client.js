@@ -520,6 +520,28 @@ var jeldaNetworkConnection = function() {
 			engine.worldManager.LocateAndUpdateEntity(data);
 
 		});
+
+		// Set up something to respond to the map state
+		mapServerConnection.on('entitycreated', function(data) {
+
+			// Log that we got the map state.
+			engine.logger.LogEvent('Server created entity ' + data.EntityId + '.');
+
+			// The initial map state packet should be handled by our map state callback.
+			engine.worldManager.InitializeEntity(data);
+
+		});
+
+		// Set up something to respond to the map state
+		mapServerConnection.on('entitydestroyed', function(data) {
+
+			// Log that we got the map state.
+			engine.logger.LogEvent('Server destroyed entity ' + data + '.');
+
+			// The initial map state packet should be handled by our map state callback.
+			engine.worldManager.DestroyEntity(data);
+
+		});
 		
 		// Log in to a specific map
 		mapServerConnection.emit('mapconnect', {
@@ -553,7 +575,6 @@ var jeldaNetworkConnection = function() {
 
 		// Finish configuring and make the request
 		xhr.open('GET', path, true);
-
 		xhr.send();
 
 	};
@@ -624,6 +645,25 @@ var jeldaWorldManager = function() {
 	// getState
 	////////////////////////////////////////////////////////////
 	var getState = function() { return state };
+
+	////////////////////////////////////////////////////////////
+	// DestroyEntity
+	////////////////////////////////////////////////////////////
+	var destroyEntity = function(entityId) {
+
+		// Locate and eliminate the entity in the list.
+		for (var i = 0; i < mapState.Entities.length; i++) {
+
+			if (mapState.Entities[i].EntityId === entityId) {
+				mapState.Entities.splice(i, 1);
+			}
+
+		}
+
+		// Also the entity lookup table
+		delete entityLookupTable[entityId];
+
+	};
 
 	////////////////////////////////////////////////////////////
 	// handleMapUpdate
@@ -766,12 +806,16 @@ var jeldaWorldManager = function() {
 
 			}
 
+			// Add it to our local entity list
+			mapState.Entities.push(finishedEntity);
+
 			// Add it to our entity lookup
-			// TODO: centralize management of entity list and entity lookup
 			entityLookupTable[entity.EntityId] = finishedEntity;
 
 			// Call the callback
-			callback(finishedEntity);
+			if (typeof callback === 'function') {
+				callback(finishedEntity);
+			}
 
 		});
 
@@ -884,38 +928,40 @@ var jeldaWorldManager = function() {
 
 			var entitiesToInitialize = newMapState.Entities.length;
 
+			// Set the map state up
+			mapState = newMapState;
+
 			// Dump out if there's no initializing to do
 			if (entitiesToInitialize === 0) {
 				callback();
 			}
 
 			// Now that we have it, let's initialize all the entities.
-			for (var i = 0; i < newMapState.Entities.length; i++) {
+			// Right now we have stubs that describe entities, but it's just a collection of states.
+			// We're going to initialize them one by one and replace them.
+			var stubEntities = mapState.Entities;
+			mapState.Entities = [];
+
+			for (var i = 0; i < stubEntities.length; i++) {
 
 				(function(i) {
 
 					// First, we need to see if this is OUR entity. All player entities come down as playerEntity.
 					// We need our particular entity to be a playerControlledEntity.
-					if (newMapState.Entities[i].EntityId === state.PlayerEntityId) {
+					if (stubEntities[i].EntityId === state.PlayerEntityId) {
 
-						newMapState.Entities[i].EntityType = 'playerControlledEntity';
+						stubEntities[i].EntityType = 'playerControlledEntity';
 
 					}
-
+					
 					// Convert the entity descriptin into something we can work with.
-					initializeEntity(newMapState.Entities[i], function(entity) {
-
-						// Actually assign it.
-						newMapState.Entities[i] = entity;
+					initializeEntity(stubEntities[i], function(entity) {
 
 						// If we have no entities left to initialize, then we're good.
 						entitiesToInitialize -= 1;
 
 						// We have no entities left to initialize?
 						if (entitiesToInitialize === 0) {
-
-							// Save the new map state as the current map state.
-							mapState = newMapState;
 
 							// Finally, we're done. Call back.
 							callback();
@@ -961,10 +1007,12 @@ var jeldaWorldManager = function() {
 	// Expose the things we want to expose
 	////////////////////////////////////////////////////////////
 	return {
+		DestroyEntity: destroyEntity,
 		GetCurrentMap: getCurrentMap,
 		GetMapState: getMapState,
 		GetState: getState,
 		Initialize: initialize,
+		InitializeEntity: initializeEntity,
 		LocateAndUpdateEntity: locateAndUpdateEntity,
 		RunWorld: runWorld,
 		SetPlayerEntityId: setPlayerEntityId

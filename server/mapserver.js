@@ -10,6 +10,36 @@ function mapServer(mapId) {
 		entityLookupTable = {};
 
 	////////////////////////////////////////////////////////////
+	// Notify all clients an entity was created.
+	////////////////////////////////////////////////////////////
+	var broadcastEntityCreated = function(entity, originator) {
+
+		// Broadcast the entity state update to everyone.
+		broadcastEvent('entitycreated', entity, originator);
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// Notify all clients an entity was destroyed.
+	////////////////////////////////////////////////////////////
+	var broadcastEntityDestroyed = function(entityId, originator) {
+
+		// Broadcast the entity state update to everyone.
+		broadcastEvent('entitydestroyed', entityId, originator);
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// Notify all clients an entity was updated.
+	////////////////////////////////////////////////////////////
+	var broadcastEntityUpdated = function(entityState, originator) {
+
+		// Broadcast the entity state update to everyone.
+		broadcastEvent('entitystateupdate', entityState, originator);
+
+	};
+
+	////////////////////////////////////////////////////////////
 	// Creates an entity for the player
 	////////////////////////////////////////////////////////////
 	var broadcastEvent = function(eventType, data, originator) {
@@ -52,6 +82,29 @@ function mapServer(mapId) {
 	};
 
 	////////////////////////////////////////////////////////////
+	// Creates an entity for the player
+	////////////////////////////////////////////////////////////
+	var destroyEntity = function(entity) {
+
+		// Find it in the map state and remove it
+		for (var i = 0; i < mapState.Entities.length; i++) {
+
+			// Remove it from the list of entities
+			mapState.Entities.splice(i, 1);
+
+		}
+
+		// Remove it from the lookup table
+		delete entityLookupTable[entity];
+
+		// TODO: Call shutdown logic on the entity
+
+		// Broadcast the entity is being destroyed
+		broadcastEntityDestroyed(entity.EntityId);
+
+	};
+
+	////////////////////////////////////////////////////////////
 	// Generates an entity ID
 	////////////////////////////////////////////////////////////
 	var generateEntityId = function() {
@@ -60,6 +113,29 @@ function mapServer(mapId) {
 		var hash = hashProvider.createHash('md5');
 		hash.update('' + new Date().getTime());
 		return hash.digest('hex');
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// Handles a client disconnect
+	////////////////////////////////////////////////////////////
+	var handleClientDisconnect = function(playerSession) {
+
+		// Locate the player session in question
+		for (var i = 0; i < playerSessions.length; i++) {
+
+			// If we've found it
+			if(playerSessions[i] === playerSession) {
+
+				// Destroy the player's entity.
+				destroyEntity(playerSession.Entity);
+
+				// Stop tracking the player session.
+				playerSessions.splice(i, 1);
+
+			}
+
+		}
 
 	};
 
@@ -73,6 +149,8 @@ function mapServer(mapId) {
 		var entity = entityLookupTable[state.EntityId];
 
 		// TODO: Validate state update
+
+		// TODO: delta updates
 
 		// Set up entity state.
 		for (var stateMember in state) {
@@ -88,7 +166,7 @@ function mapServer(mapId) {
 		}
 
 		// Broadcast the entity state update to everyone.
-		broadcastEvent('entitystateupdate', getEntityStateForTransmission(entity), playerSession);
+		broadcastEntityUpdated(getEntityStateForTransmission(entity), playerSession);
 
 	};
 
@@ -143,10 +221,20 @@ function mapServer(mapId) {
 
 		});
 
+		playerSession.SubscribeToEvent('disconnect', function() {
+
+			console.log('poop!')
+
+			// Handle the disconnect
+			handleClientDisconnect(playerSession);
+
+		});
+
 		// Assign the player entity to the player's session
 		playerSession.Entity = playerEntity;
 
-		// TODO: Handle disconnects
+		// Broadcast that the entity has been created
+		broadcastEntityCreated(playerEntity, playerSession);
 
 	};
 
