@@ -236,7 +236,7 @@ var jeldaGraphicsEngine = function() {
 	// Variables
 	////////////////////////////////////////////////////////////
 	var context, dimensions, engine;
-
+  
 	////////////////////////////////////////////////////////////
 	// ClearCanvas
 	////////////////////////////////////////////////////////////
@@ -264,20 +264,21 @@ var jeldaGraphicsEngine = function() {
 	////////////////////////////////////////////////////////////
 	// DrawText
 	////////////////////////////////////////////////////////////
-	var drawText = function(text, font, size, color, x, y, strokeColor, strokeWidth) {
+	var drawText = function(text, font, color, x, y, strokeColor, strokeWidth) {
 
-		// Set the context's rendering font
-		context.font = size + 'px ' + font;
-		context.fillStyle = color;
-
-		// Draw the text
-		context.fillText(text, x, y);
-
+		// Draw stroke
 		if (strokeColor) {
 			context.strokeStyle = strokeColor;
 			context.lineWidth = strokeWidth;
 			context.strokeText(text, x, y);
 		}
+
+		// Set the context's rendering font
+		context.font = font;
+		context.fillStyle = color;
+
+		// Draw the text
+		context.fillText(text, x, y);
 
 	};
 
@@ -329,10 +330,10 @@ var jeldaGraphicsEngine = function() {
 	////////////////////////////////////////////////////////////
 	// MeasureText
 	////////////////////////////////////////////////////////////
-	var measureText = function(text, font, size) {
+	var measureText = function(text, font) {
 
 		// Set the context's rendering font
-		context.font = size + 'px ' + font;
+		context.font = font;
 
 		// Return the text measurement object.
 		return context.measureText(text);
@@ -454,7 +455,8 @@ var jeldaNetworkConnection = function() {
 					EntityType: 'playerEntity',
 					EntityState: {
 						X: 50,
-						Y: 50
+						Y: 50,
+						DisplayName: 'Protocollie'
 					}
 				}
 			]
@@ -781,7 +783,7 @@ var jeldaWorldManager = function() {
 			var frameRate = Math.floor(1000 / (startTime - lastFrameStart));
 
 			// Print the framerate
-			engine.graphics.DrawText(frameRate + 'fps', 'Arial', 12, 'white', 10, 20); 
+			engine.graphics.DrawText(frameRate + 'fps', '12px Arial', 'white', 10, 20); 
 
 			// Allow processing, then come back.
 			setTimeout(gameLoop, 0);
@@ -1011,26 +1013,25 @@ var jeldaClient = (function() {
 
 		var g = engine.graphics,
 			/* Debuggery. This should be a neat modal window entity. */
-			messageFont = 'Arial',
-			messageFontSize = 50,
+			messageFont = '50px Arial',
 			messageText = 'Now loading...',
-			messageDimensions = g.MeasureText(messageText, messageFont, messageFontSize),
+			messageDimensions = g.MeasureText(messageText, messageFont),
 			/* End debuggery. */
 			stepTextFontSize = 20,
 			stepTextDimensions = g.MeasureText(loadingText, messageFont, stepTextFontSize),
 			viewportDimensions = g.GetDimensions(),
 			msgX = viewportDimensions.width / 2 - messageDimensions.width / 2,
-			msgY = viewportDimensions.height / 2 - messageFontSize / 2,
+			msgY = viewportDimensions.height / 2 - 50 / 2,
 			stepX = viewportDimensions.width / 2 - stepTextDimensions.width / 2;
 
 		/* Debuggery. Again, this would be a dialog entity that would redraw in the draw loop. */
 		g.ClearCanvas();
 
 		// Draw some loading text
-		g.DrawText(messageText, messageFont, messageFontSize, '#FFFFFF', msgX, msgY, '#555', 2)
+		g.DrawText(messageText, messageFont, '#FFFFFF', msgX, msgY, '#555', 2)
 
 		// And draw the loading message.
-		g.DrawText(loadingText, messageFont, stepTextFontSize, '#DDDDDD', stepX, msgY + messageFontSize)
+		g.DrawText(loadingText, messageFont, '#DDDDDD', stepX, msgY + 50)
 
 	};
 

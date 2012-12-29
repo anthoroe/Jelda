@@ -1,7 +1,8 @@
 function(engine) {
 
 	var speed = 200,
-		viewportDimensions = engine.graphics.GetDimensions();
+		viewportDimensions = engine.graphics.GetDimensions(),
+		nameplateFont = 'bold 16px Arial';
 
 	// Debug
 	var image = new Image();
@@ -15,6 +16,11 @@ function(engine) {
 	// Y
 	////////////////////////////////////////////////////////////
 	this.Y = 0;
+
+	////////////////////////////////////////////////////////////
+	// DisplayName
+	////////////////////////////////////////////////////////////
+	this.DisplayName = 'Player';
 
 	////////////////////////////////////////////////////////////
 	// DoProcessing
@@ -48,8 +54,18 @@ function(engine) {
 	////////////////////////////////////////////////////////////
 	this.Draw = function(g, position) {
 
+		var nameWidth, nameX, nameY;
+
 		// Just draw an image at the right place, for now.
 		g.DrawImage(image, position.X, position.Y);
+
+		// Figure out the width of the name
+		nameplateSize = g.MeasureText(this.DisplayName, nameplateFont);
+		nameX = position.X + (image.width / 2) - (nameplateSize.width / 2);
+		nameY = position.Y + image.height + 18;
+
+		// Draw the name
+		g.DrawText(this.DisplayName, nameplateFont, 'black', nameX, nameY, 'white', 2);
 
 	};
 
