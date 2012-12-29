@@ -548,7 +548,7 @@ var jeldaNetworkConnection = function() {
 		}
 
 		// Open the connection
-		mapServerConnection = new WebSocket('ws://jelda-server.herokuapp.com' + mapId);
+		mapServerConnection = new WebSocket('ws://jelda-server.herokuapp.com/' + mapId);
 
 		// Set up the message callback.
 		mapServerConnection.onopen = function() { 
