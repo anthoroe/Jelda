@@ -449,16 +449,12 @@ var jeldaNetworkConnection = function() {
 	var getMapState = function(mapId, callback) {
 
 		// Open a connection to the map server
-		openMapServerConnection(mapId, function() {
-
-			// TODO: Request map state
-
-		}, function(event) {
+		openMapServerConnection(mapId, function(data) {
 
 			// TODO: More than this, but this is a start.
 			// Ideally, we'd wait for the initial state sync, then pass this off to a standard event handler.
 			// TODO: Possibly change this method name to StartMapSynchronization or something?
-			callback(JSON.parse(event.data));
+			callback(data);
 
 		});
 
@@ -540,7 +536,10 @@ var jeldaNetworkConnection = function() {
 	////////////////////////////////////////////////////////////
 	// objectify 
 	////////////////////////////////////////////////////////////
-	var openMapServerConnection = function(mapId, openCallback, messageCallback) {
+	var openMapServerConnection = function(mapId, mapStateCallback) {
+
+		// Log what's happening!
+		engine.logger.LogEvent('Initializing map server connection...');
 
 		// If we have an existing connection, close it.
 		if (mapServerConnection) {
@@ -548,20 +547,17 @@ var jeldaNetworkConnection = function() {
 		}
 
 		// Open the connection
-		mapServerConnection = new WebSocket('ws://jelda-server.herokuapp.com/' + mapId);
+		mapServerConnection = io.connect();
+		mapServerConnection.on('mapstate', function(data) {
 
-		// Set up the message callback.
-		mapServerConnection.onopen = function() { 
+			// Log that we got the map state.
+			engine.logger.LogEvent('Initial map state received!');
 
-			// Log the opened connection
-			engine.logger.LogEvent('Opened connection to map server for ' + mapId) 
+			// The initial map state packet should be handled by our map state callback.
+			mapStateCallback(data);
 
-			// Call the opened callback
-			openCallback();
-
-		};
-		mapServerConnection.onmessage = messageCallback;
-		mapServerConnection.onclose = function() { engine.logger.LogEvent('Closed connection to map server for ' + mapId) }
+		});
+		
 
 	};
 
@@ -1139,5 +1135,7 @@ var jeldaClient = (function() {
 // Initialize the app.
 ////////////////////////////////////////////////////////////
 window.onload = function() {
+
+	// Start up the client!
 	document.client = new jeldaClient(); 
 };
