@@ -1,4 +1,4 @@
 {
-	 ImageUri: 'assets/graphics/tile/water.png'
-	/* BEHAVIOR GOES HERE */
+	 ImageUri: 'assets/graphics/tile/water.png',
+	 Solid: true
 }

@@ -2,7 +2,8 @@ function(engine) {
 
 	var speed = 200,
 		viewportDimensions = engine.graphics.GetDimensions(),
-		nameplateFont = 'bold 16px Arial';
+		nameplateFont = 'bold 16px Arial',
+		entitySize = 32;
 
 	// Debug
 	var image = new Image();
@@ -39,27 +40,39 @@ function(engine) {
 
 		// Key states contains all the important things.
 		var change = delta * (speed / 1000), 
-			keyStates = engine.input.PollKeys();
-
-		// Reset velocities
-		var velocityX = 0, velocityY = 0;
+			keyStates = engine.input.PollKeys(),
+			x = this.X, y = this.Y,
+			velocityX = 0, velocityY = 0;
 
 		// Figure out our velocities in either direction. 
 		if (keyStates[37] === true) {
-			this.X -= change;
+			x -= change;
 			velocityX -= speed;
 		}
 		if (keyStates[39] === true) {
-			this.X += change;
+			x += change;
 			velocityX += speed;
 		}
 		if (keyStates[38] === true) {
-			this.Y -= change;
+			y -= change;
 			velocityY -= speed;
 		}
 		if (keyStates[40] === true) {
-			this.Y += change;
-			velocityY  += speed;
+			y += change;
+			velocityY += speed;
+		}
+
+		// Detect collisions!
+		if(engine.worldManager.DetectCollision(x, y, entitySize, entitySize)) {
+
+			velocityX = 0;
+			velocityY = 0;
+
+		} else {
+
+			this.X = x;
+			this.Y = y;
+
 		}
 
 		// Do we need to update the server?

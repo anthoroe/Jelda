@@ -60,7 +60,8 @@ function mapServer(mapId) {
 	var createPlayerEntity = function(playerSession) {
 
 		// Create the entity
-		// TODO: This. Better.
+		// TODO: This. Better. Actually new up an entity properly.
+		// One with its own entity code.
 		var entity = {
 			EntityId: generateEntityId(),
 			EntityType: 'playerEntity',
@@ -72,9 +73,7 @@ function mapServer(mapId) {
 		};
 
 		// Push it into our entity list.
-		// TODO: RegisterEntity
-		mapState.Entities.push(entity);
-		entityLookupTable[entity.EntityId] = entity;
+		registerEntity(entity);
 
 		// Return this player's entity.
 		return entity;
@@ -195,6 +194,16 @@ function mapServer(mapId) {
 		return entityState;
 
 	};
+
+	////////////////////////////////////////////////////////////
+	// Handles an entity state update event
+	////////////////////////////////////////////////////////////
+	var registerEntity = function(entity) {
+
+		mapState.Entities.push(entity);
+		entityLookupTable[entity.EntityId] = entity;
+
+	}
 
 	////////////////////////////////////////////////////////////
 	// Register a player as being connected to this map.

@@ -1,4 +1,9 @@
 ////////////////////////////////////////////////////////////
+// Some globals
+////////////////////////////////////////////////////////////
+var TILE_SIZE = 32;
+
+////////////////////////////////////////////////////////////
 // The local cache. This stores behaviors, images, maps, etc.
 ////////////////////////////////////////////////////////////
 var jeldaCache = function() {
@@ -666,6 +671,70 @@ var jeldaWorldManager = function() {
 	};
 
 	////////////////////////////////////////////////////////////
+	// DetectCollision
+	////////////////////////////////////////////////////////////
+	var detectCollision = function(colX, colY, width, height) {
+
+		var tileX, tileY, currentTile,
+			detectionStartX = Math.floor((colX - TILE_SIZE) / TILE_SIZE),
+			detectionStartY = Math.floor((colY - TILE_SIZE) / TILE_SIZE),
+			detectionEndX = Math.ceil((colX + width) / TILE_SIZE),
+			detectionEndY = Math.ceil((colY + height) / TILE_SIZE); 
+
+		// Basic 'don't leave the map' detection.
+		if (colX < 0 || colX + width > map.Dimensions.Width * TILE_SIZE ||
+			colY < 0 || colY + height > map.Dimensions.Height * TILE_SIZE) {
+
+			// We have a map boundary collision!
+			return { 
+				type: 'boundary'
+			}
+
+		}
+
+		// Clamp terrain collision detection to tiles that actually exist.
+		if (detectionStartX < 0) { detectionStartX = 0; }
+		if (detectionEndX > map.Dimensions.Width - 1) { detectionEndX = map.Dimensions.Width - 1; }
+		if (detectionStartY < 0) { detectionStartY = 0; }
+		if (detectionEndY > map.Dimensions.Height - 1) { detectionEndY = map.Dimensions.Height - 1; }
+
+		// Detect terrain collisions
+		for (var x = detectionStartX; x <= detectionEndX; x++) {
+			for (var y = detectionStartY; y <= detectionEndY; y++) {
+
+				// Calculate the position of this tile.
+				tileX = x * TILE_SIZE, tileY = y * TILE_SIZE;
+
+				// Are we actually overlapping the tile?
+				if (((tileX + TILE_SIZE >= colX && tileX <= colX + width) || 
+					(tileX <= colX + width && tileX + TILE_SIZE >= colX)) &&
+					((tileY + TILE_SIZE >= colY && tileY <= colY + height) ||
+					(tileY <= colY + height && tileY + TILE_SIZE >= colY))) {
+
+					// For readability
+					currentTile = map.MapData[y][x];
+
+					// If the tile is solid...
+					if(map.TileAssets[currentTile].Solid === true) {
+
+						// Return true
+						return {
+							type: 'terrain',
+							x: tileX,
+							y: tileY
+						};
+
+					}
+
+				}
+			}
+		}
+
+		// No collisions!
+		return false;
+	};
+
+	////////////////////////////////////////////////////////////
 	// handleMapUpdate
 	////////////////////////////////////////////////////////////
 	var handleMapUpdate = function(newState, callback) {
@@ -1008,6 +1077,7 @@ var jeldaWorldManager = function() {
 	////////////////////////////////////////////////////////////
 	return {
 		DestroyEntity: destroyEntity,
+		DetectCollision: detectCollision,
 		GetCurrentMap: getCurrentMap,
 		GetMapState: getMapState,
 		GetState: getState,
@@ -1096,7 +1166,7 @@ var jeldaWorldRenderer = function() {
 				currentTile = map.MapData[y][x];
 
 				// Paint the tile.
-				graphics.DrawImage(map.TileAssets[currentTile].ImageData, (32 * x) - camera.X, (32 * y) - camera.Y);
+				graphics.DrawImage(map.TileAssets[currentTile].ImageData, (TILE_SIZE * x) - camera.X, (TILE_SIZE * y) - camera.Y);
 
 			}
 		}
