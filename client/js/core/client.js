@@ -428,7 +428,7 @@ var jeldaNetworkConnection = function() {
 	////////////////////////////////////////////////////////////
 	// Variables
 	////////////////////////////////////////////////////////////
-	var engine;
+	var engine, mapServerConnection;
 
 	////////////////////////////////////////////////////////////
 	// GetAsset
@@ -448,18 +448,18 @@ var jeldaNetworkConnection = function() {
 	////////////////////////////////////////////////////////////
 	var getMapState = function(mapId, callback) {
 
-		callback({
-			Entities: [
-				{
-					EntityId: '1234',
-					EntityType: 'playerEntity',
-					EntityState: {
-						X: 50,
-						Y: 50,
-						DisplayName: 'Protocollie'
-					}
-				}
-			]
+		// Open a connection to the map server
+		openMapServerConnection(mapId, function() {
+
+			// TODO: Request map state
+
+		}, function(event) {
+
+			// TODO: More than this, but this is a start.
+			// Ideally, we'd wait for the initial state sync, then pass this off to a standard event handler.
+			// TODO: Possibly change this method name to StartMapSynchronization or something?
+			callback(JSON.parse(event.data));
+
 		});
 
 	};
@@ -534,6 +534,34 @@ var jeldaNetworkConnection = function() {
 	var objectify = function(responseText) {
 
 		return eval('(function() { return ' + responseText + '; })();');
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// objectify 
+	////////////////////////////////////////////////////////////
+	var openMapServerConnection = function(mapId, openCallback, messageCallback) {
+
+		// If we have an existing connection, close it.
+		if (mapServerConnection) {
+			mapServerConnection.close();
+		}
+
+		// Open the connection
+		mapServerConnection = new WebSocket('ws://jelda-server.herokuapp.com' + mapId);
+
+		// Set up the message callback.
+		mapServerConnection.onopen = function() { 
+
+			// Log the opened connection
+			engine.logger.LogEvent('Opened connection to map server for ' + mapId) 
+
+			// Call the opened callback
+			openCallback();
+
+		};
+		mapServerConnection.onmessage = messageCallback;
+		mapServerConnection.onclose = function() { engine.logger.LogEvent('Closed connection to map server for ' + mapId) }
 
 	};
 
@@ -624,6 +652,8 @@ var jeldaWorldManager = function() {
 	////////////////////////////////////////////////////////////
 	var handlePlayerStateChange = function(newState, callback) {
 
+		var net = engine.network;
+
 		// TODO: Clean up old state, dispose all items.
 
 		// First, did we jump maps?
@@ -642,7 +672,12 @@ var jeldaWorldManager = function() {
 				engine.logger.LogEvent('NEW REGION - Must sync map state..');
 
 				// Sync state with the new map.
-				syncMapState(callback);
+				syncMapState(function() {
+
+					// Finally, call the callback.
+					callback();
+
+				});
 
 			} else {
 
