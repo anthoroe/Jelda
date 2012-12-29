@@ -13,7 +13,7 @@ var express = require('express'),
 	io = require('socket.io').listen(server);
 
 ////////////////////////////////////////////////////////////
-// Routing
+// Static file routing
 ////////////////////////////////////////////////////////////
 app.get('/', function(req, res) {
 	res.sendfile(__dirname + '/client/default.html');
@@ -31,13 +31,40 @@ io.configure(function () {
 });
 
 ////////////////////////////////////////////////////////////
-// Game server logic!
+// Login code
+////////////////////////////////////////////////////////////
+app.get('/login/:token?', function(req, res) {
+
+	// Debuggery
+	console.log('requested player state');
+
+	// Send the player state!
+	res.send({
+		PlayerInfo: {
+			// Should be an initialized PlayerEntity at some point.
+			Name: req.param('token'),
+			Token: req.param('token')
+		},
+		LocationInfo: {
+			LocationId: 'home'
+		}
+	});
+
+});
+
+////////////////////////////////////////////////////////////
+// Map server connection logic
 ////////////////////////////////////////////////////////////
 var world = io.on('connection', function(socket) {
 
-		console.log('connected!');
+	////////////////////////////////////////////////////////////
+	// Handle attempts to login to a map.
+	////////////////////////////////////////////////////////////
+	socket.on('connect', function(data) {
 
-		// TODO: REAL MANLY handshake
+		////////////////////////////////////////////////////////////
+		// Respond with map state so we can sync map states
+		////////////////////////////////////////////////////////////
 		socket.emit('mapstate', {
 			Entities: [
 				{
@@ -46,13 +73,15 @@ var world = io.on('connection', function(socket) {
 					EntityState: {
 						X: 50,
 						Y: 50,
-						DisplayName: 'Player'
+						DisplayName: data.token
 					}
 				}
 			]
 		});
 
 	});
+
+});
 
 ////////////////////////////////////////////////////////////
 // Configure the port

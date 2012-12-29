@@ -444,18 +444,36 @@ var jeldaNetworkConnection = function() {
 	};
 
 	////////////////////////////////////////////////////////////
-	// GetMapState	
+	// LoginToMap	
 	////////////////////////////////////////////////////////////
-	var getMapState = function(mapId, callback) {
+	var loginToMap = function(mapId, token, callback) {
 
-		// Open a connection to the map server
-		openMapServerConnection(mapId, function(data) {
+		/// Log what's happening!
+		engine.logger.LogEvent('Initializing map server connection...');
 
-			// TODO: More than this, but this is a start.
-			// Ideally, we'd wait for the initial state sync, then pass this off to a standard event handler.
-			// TODO: Possibly change this method name to StartMapSynchronization or something?
+		// If we have an existing connection, close it.
+		// TODO: FIX THIS
+		if (mapServerConnection) {
+			mapServerConnection.close();
+		}
+
+		// Open the connection
+		mapServerConnection = io.connect();
+
+		// Set up something to respond to the map state
+		mapServerConnection.on('mapstate', function(data) {
+
+			// Log that we got the map state.
+			engine.logger.LogEvent('Initial map state received!');
+
+			// The initial map state packet should be handled by our map state callback.
 			callback(data);
 
+		});
+		
+		// Log in to a specific map
+		mapServerConnection.emit('connect', {
+			token: token
 		});
 
 	};
@@ -463,19 +481,12 @@ var jeldaNetworkConnection = function() {
 	////////////////////////////////////////////////////////////
 	// GetPlayerState	
 	////////////////////////////////////////////////////////////
-	var getPlayerState = function(callback) {
+	var getPlayerState = function(token, callback) {
 
-		/* Debuggery time! For now, we're just going to return a standard object. */
-		callback({
-			// Entity behavior should take responsibility for making it movable.
-			PlayerInfo: {
-				// Should be an initialized PlayerEntity at some point.
-				Name: 'Player'
-			},
-			LocationInfo: {
-				LocationId: 'home'
-			}
-		});
+		var statePath = '/login/' + token;
+
+		// Actually request player state
+		makeRequest(statePath, callback);
 
 	};
 	
@@ -534,39 +545,11 @@ var jeldaNetworkConnection = function() {
 	};
 
 	////////////////////////////////////////////////////////////
-	// objectify 
-	////////////////////////////////////////////////////////////
-	var openMapServerConnection = function(mapId, mapStateCallback) {
-
-		// Log what's happening!
-		engine.logger.LogEvent('Initializing map server connection...');
-
-		// If we have an existing connection, close it.
-		if (mapServerConnection) {
-			mapServerConnection.close();
-		}
-
-		// Open the connection
-		mapServerConnection = io.connect();
-		mapServerConnection.on('mapstate', function(data) {
-
-			// Log that we got the map state.
-			engine.logger.LogEvent('Initial map state received!');
-
-			// The initial map state packet should be handled by our map state callback.
-			mapStateCallback(data);
-
-		});
-		
-
-	};
-
-	////////////////////////////////////////////////////////////
 	// Expose the things we want to expose
 	////////////////////////////////////////////////////////////
 	return {
 		GetAsset: getAsset,
-		GetMapState: getMapState,
+		LoginToMap: loginToMap,
 		GetPlayerState: getPlayerState,
 		Initialize: initialize
 	};
@@ -668,7 +651,7 @@ var jeldaWorldManager = function() {
 				engine.logger.LogEvent('NEW REGION - Must sync map state..');
 
 				// Sync state with the new map.
-				syncMapState(function() {
+				syncMapState(newState, function() {
 
 					// Finally, call the callback.
 					callback();
@@ -689,13 +672,14 @@ var jeldaWorldManager = function() {
 	////////////////////////////////////////////////////////////
 	// Initialize 
 	////////////////////////////////////////////////////////////
-	var initialize = function(e, callback) {
+	var initialize = function(e, token, callback) {
 
 		// Save the engine reference
 		engine = e;
 
+		// TODO: This should be post-login. Token will be an actual one-time login token in the future, not a player name.
 		// Get the player's state.
-		engine.network.GetPlayerState(function(playerState) {
+		engine.network.GetPlayerState(token, function(playerState) {
 
 			// Log that network connection has been initialized.
 			engine.logger.LogEvent('Got player state.');
@@ -835,13 +819,13 @@ var jeldaWorldManager = function() {
 	////////////////////////////////////////////////////////////
 	// syncMapState
 	////////////////////////////////////////////////////////////
-	var syncMapState = function(callback) {
+	var syncMapState = function(newState, callback) {
 
 		// Log what's about to happen
 		engine.logger.LogEvent('Requesting map state.');
 
 		// First thing's first - let's request the map state.
-		engine.network.GetMapState(state.LocationInfo.LocationId, function(newMapState) {
+		engine.network.LoginToMap(state.LocationInfo.LocationId, newState.PlayerInfo.Token, function(newMapState) {
 
 			var entitiesToInitialize = newMapState.Entities.length;
 
@@ -930,6 +914,8 @@ var jeldaWorldRenderer = function() {
 
 		// Now, draw entities.
 		drawEntities();
+
+		// TODO: Draw the UI
 
 	};
 
@@ -1104,9 +1090,12 @@ var jeldaClient = (function() {
 		// We can show something useful on the screen, so let's do it.
 		showLoadingMessage('Initializing world...');
 
+		// MASSIVE debuggery.
+		var token = prompt('What name are you going to log in with?');
+
 		// Time to initialize the world manager. This won't always happen here, but for now, it does.
 		// We have to do this async, because it's going to rely on a lot of async caching.
-		engine.worldManager.Initialize(engine, function(success) {
+		engine.worldManager.Initialize(engine, token, function(success) {
 			
 			// Oh no, an ERROR!
 			if (!success) {
