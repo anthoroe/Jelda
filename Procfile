@@ -1,1 +1,1 @@
-web: node assetserver.js
+web: node gameserver.js
