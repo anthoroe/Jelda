@@ -470,10 +470,22 @@ var jeldaNetworkConnection = function() {
 			callback(data);
 
 		});
+
+		// Set up something to respond to the map state
+		mapServerConnection.on('playerentityid', function(data) {
+
+			// Log that we got the map state.
+			engine.logger.LogEvent('Received player entity ID.');
+
+			// The initial map state packet should be handled by our map state callback.
+			engine.worldManager.SetPlayerEntityId(data);
+
+		});
 		
 		// Log in to a specific map
-		mapServerConnection.emit('connect', {
-			token: token
+		mapServerConnection.emit('mapconnect', {
+			MapId: mapId,
+			Token: token
 		});
 
 	};
@@ -651,7 +663,7 @@ var jeldaWorldManager = function() {
 				engine.logger.LogEvent('NEW REGION - Must sync map state..');
 
 				// Sync state with the new map.
-				syncMapState(newState, function() {
+				syncMapState(function() {
 
 					// Finally, call the callback.
 					callback();
@@ -817,15 +829,24 @@ var jeldaWorldManager = function() {
 	};
 
 	////////////////////////////////////////////////////////////
+	// SetPlayerEntityId
+	////////////////////////////////////////////////////////////
+	var setPlayerEntityId = function(entityId) {
+
+		state.PlayerEntityId = entityId;
+
+	};
+
+	////////////////////////////////////////////////////////////
 	// syncMapState
 	////////////////////////////////////////////////////////////
-	var syncMapState = function(newState, callback) {
+	var syncMapState = function(callback) {
 
 		// Log what's about to happen
 		engine.logger.LogEvent('Requesting map state.');
 
 		// First thing's first - let's request the map state.
-		engine.network.LoginToMap(state.LocationInfo.LocationId, newState.PlayerInfo.Token, function(newMapState) {
+		engine.network.LoginToMap(state.LocationInfo.LocationId, state.PlayerInfo.Token, function(newMapState) {
 
 			var entitiesToInitialize = newMapState.Entities.length;
 
@@ -838,6 +859,14 @@ var jeldaWorldManager = function() {
 			for (var i = 0; i < newMapState.Entities.length; i++) {
 
 				(function(i) {
+
+					// First, we need to see if this is OUR entity. All player entities come down as playerEntity.
+					// We need our particular entity to be a playerControlledEntity.
+					if (newMapState.Entities[i].EntityId === state.PlayerEntityId) {
+
+						newMapState.Entities[i].EntityType = 'playerControlledEntity';
+
+					}
 
 					// Convert the entity descriptin into something we can work with.
 					initializeEntity(newMapState.Entities[i], function(entity) {
@@ -883,7 +912,8 @@ var jeldaWorldManager = function() {
 		GetMapState: getMapState,
 		GetState: getState,
 		Initialize: initialize,
-		RunWorld: runWorld
+		RunWorld: runWorld,
+		SetPlayerEntityId: setPlayerEntityId
 	};
 };
 
@@ -928,6 +958,8 @@ var jeldaWorldRenderer = function() {
 			graphics = engine.graphics;
 
 		// TODO: Clip offscreen entities
+
+		// TODO: Sort renderable entities by y position, descending.
 
 		// Iterate through all the entities
 		for (var i = 0; i < entities.length; i++) {

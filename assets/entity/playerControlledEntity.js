@@ -64,7 +64,7 @@ function(engine) {
 		nameX = position.X + (image.width / 2) - (nameplateSize.width / 2);
 		nameY = position.Y + image.height + 18;
 
-		// Draw the name
+		// Draw the nameplate.
 		g.DrawText(this.DisplayName, nameplateFont, 'black', nameX, nameY, 'white', 2);
 
 	};
@@ -78,17 +78,7 @@ function(engine) {
 
 	};
 
-	////////////////////////////////////////////////////////////
-	// SetPosition
-	////////////////////////////////////////////////////////////
-	this.SetPosition = function(xPos, yPos) {
-
-		x = xPos;
-		y = yPos;
-
-	};
-
 	// TODO: initialize resources in entity setup
-	image.src = 'res/entities/player/player.png';
+	image.src = 'assets/graphics/entities/player/player.png';
 
 };

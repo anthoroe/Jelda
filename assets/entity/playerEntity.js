@@ -1,0 +1,92 @@
+function(engine) {
+
+	var speed = 200,
+		viewportDimensions = engine.graphics.GetDimensions(),
+		nameplateFont = 'bold 16px Arial';
+
+	// Debug
+	var image = new Image();
+
+	////////////////////////////////////////////////////////////
+	// X
+	////////////////////////////////////////////////////////////
+	this.X = 0;
+
+	////////////////////////////////////////////////////////////
+	// Y
+	////////////////////////////////////////////////////////////
+	this.Y = 0;
+
+	////////////////////////////////////////////////////////////
+	// VelocityX
+	////////////////////////////////////////////////////////////
+	this.VelocityX = 0;
+
+	////////////////////////////////////////////////////////////
+	// VelocityY
+	////////////////////////////////////////////////////////////
+	this.VelocityY = 0;
+
+	////////////////////////////////////////////////////////////
+	// Alignment
+	////////////////////////////////////////////////////////////
+	this.Alignment = 'neutral';
+
+	////////////////////////////////////////////////////////////
+	// DisplayName
+	////////////////////////////////////////////////////////////
+	this.DisplayName = 'Player';
+
+	////////////////////////////////////////////////////////////
+	// Draw
+	////////////////////////////////////////////////////////////
+	this.Draw = function(g, position) {
+
+		var nameWidth, nameX, nameY, nameplateColor;
+
+		// Just draw an image at the right place, for now.
+		g.DrawImage(image, position.X, position.Y);
+
+		// Figure out the width of the name
+		nameplateSize = g.MeasureText(this.DisplayName, nameplateFont);
+		nameX = position.X + (image.width / 2) - (nameplateSize.width / 2);
+		nameY = position.Y + image.height + 18;
+
+		// Figure out the nameplate color.
+		if (this.Alignment === 'friendly') { nameplateColor = 'green'; }
+		else if (this.Alignment === 'enemy') { nameplateColor = 'red'; }
+		else { nameplateColor = 'black'; }
+
+		// Draw the name
+		g.DrawText(this.DisplayName, nameplateFont, nameplateColor, nameX, nameY, 'white', 2);
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// DoProcessing
+	////////////////////////////////////////////////////////////
+	this.DoProcessing = function(delta) {
+
+		// Key states contains all the important things.
+		var deltaX = delta * (this.VelocityX / 1000), 
+			deltaY = delta * (this.VelocityY / 1000);
+
+		// Figure out our velocities in either direction. 
+		this.X += deltaX;
+		this.Y += deltaY;
+
+	};
+
+	////////////////////////////////////////////////////////////
+	// Initialize
+	////////////////////////////////////////////////////////////
+	this.Initialize = function() {
+
+		// Nothing, for now.
+
+	};
+
+	// TODO: initialize resources in entity setup
+	image.src = 'assets/graphics/entities/player/player.png';
+
+};

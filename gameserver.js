@@ -20,7 +20,8 @@ app.get('/', function(req, res) {
 });
 
 // If they're looking for static content, send that their way.
-app.use(express.static(__dirname + '/client'));
+app.use('/client', express.static(__dirname + '/client'));
+app.use('/assets', express.static(__dirname + '/assets'));
 
 ////////////////////////////////////////////////////////////
 // Configure socket.io for heroku
@@ -35,10 +36,7 @@ io.configure(function () {
 ////////////////////////////////////////////////////////////
 app.get('/login/:token?', function(req, res) {
 
-	// Debuggery
-	console.log('requested player state');
-
-	// Send the player state!
+	// Send all the details required to connect to the first map server.
 	res.send({
 		PlayerInfo: {
 			// Should be an initialized PlayerEntity at some point.
@@ -53,35 +51,10 @@ app.get('/login/:token?', function(req, res) {
 });
 
 ////////////////////////////////////////////////////////////
-// Map server connection logic
+// Initialize the world server, which manages all the 'map servers'.
+// Pass in our initialized socket.io interface
 ////////////////////////////////////////////////////////////
-var world = io.on('connection', function(socket) {
-
-	////////////////////////////////////////////////////////////
-	// Handle attempts to login to a map.
-	////////////////////////////////////////////////////////////
-	socket.on('connect', function(data) {
-
-		////////////////////////////////////////////////////////////
-		// Respond with map state so we can sync map states
-		////////////////////////////////////////////////////////////
-		socket.emit('mapstate', {
-			Entities: [
-				{
-					EntityId: '1234',
-					EntityType: 'playerEntity',
-					EntityState: {
-						X: 50,
-						Y: 50,
-						DisplayName: data.token
-					}
-				}
-			]
-		});
-
-	});
-
-});
+var world = require('./server/worldserver.js').Initialize(io);
 
 ////////////////////////////////////////////////////////////
 // Configure the port
