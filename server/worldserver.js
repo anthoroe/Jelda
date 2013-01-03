@@ -19,8 +19,6 @@ function initialize(io) {
 		// First, create a player session for this connection.
 		var playerSession = new PlayerSession(socket);
 
-		console.log('got here');
-
 		////////////////////////////////////////////////////////////
 		// Attempt to connect to a map.
 		////////////////////////////////////////////////////////////
